@@ -1,90 +1,16 @@
-<div class="container-fluid">
-    <div class="panel panel-default">
-        <div class="panel-heading">
-            <strong><i class="fa fa-recycle"></i> 回收站</strong>
-            <span class="text-muted">&nbsp;&nbsp;删除的文档将按空间配置的天数保留，到期后自动彻底删除</span>
-        </div>
-        <div class="panel-body">
-            <div class="row">
-                <form action="" method="get">
-                    <div class="col-md-4">
-                        <div class="input-group">
-                            <span class="input-group-addon">选择空间</span>
-                            <select class="form-control" name="space_id" onchange="this.form.submit()">
-                                <option value="">-- 全部空间 --</option>
-                                {{range $space := .spaces}}
-                                <option value="{{$space.space_id}}" {{if eq $.current_space_id $space.space_id}}selected{{end}}>{{$space.name}}</option>
-                                {{end}}
-                            </select>
-                        </div>
-                    </div>
-                    {{if .space.recycle_keep_days}}
-                    <div class="col-md-4 pull-right text-right">
-                        <button type="button" class="btn btn-danger btn-sm" onclick="Layers.confirm('确定要清空该空间回收站吗？所有文档将无法恢复！', '/recycle/clear?space_id={{.space.space_id}}');">
-                            <i class="fa fa-trash"></i> 清空回收站
-                        </button>
-                    </div>
-                    {{end}}
-                </form>
-            </div>
-        </div>
-        {{if .space.space_id}}
-        <div class="table-responsive">
-            <table class="table table-bordered">
-                <thead>
-                <tr>
-                    <th class="w25p">文档名称</th>
-                    <th class="w10p">类型</th>
-                    <th class="w12p">删除人</th>
-                    <th class="w15p">删除时间</th>
-                    <th class="w10p">剩余天数</th>
-                    <th class="w18p">操作</th>
-                </tr>
-                </thead>
-                <tbody>
-                {{range $doc := .documents}}
-                <tr>
-                    <td>
-                        <i class="fa {{if eq $doc.type "2"}}fa-folder-o{{else}}fa-file-text-o{{end}}"></i>
-                        {{$doc.name}}
-                    </td>
-                    <td class="center">
-                        {{if eq $doc.type "2"}}
-                        <span class="label label-warning">目录</span>
-                        {{else}}
-                        <span class="label label-primary">页面</span>
-                        {{end}}
-                    </td>
-                    <td class="center">{{$doc.delete_username}}</td>
-                    <td class="center">{{dateFormat $doc.deleted_time "Y-m-d H:i:s"}}</td>
-                    <td class="center">
-                        <span class="label label-info">{{$doc.remain_days}}天</span>
-                    </td>
-                    <td class="center">
-                        <button type="button" class="btn btn-success btn-xs" onclick="Layers.confirm('确定要恢复该文档吗？', '/recycle/recover?document_id={{$doc.document_id}}');">
-                            <i class="fa fa-undo"></i> 恢复
-                        </button>
-                        <button type="button" class="btn btn-danger btn-xs" onclick="Layers.confirm('彻底删除后无法恢复，确定要删除吗？', '/recycle/remove?document_id={{$doc.document_id}}');">
-                            <i class="fa fa-trash"></i> 彻底删除
-                        </button>
-                    </td>
-                </tr>
-                {{end}}
-                {{if eq (len .documents) 0}}
-                <tr>
-                    <td colspan="6" class="center text-muted">回收站为空</td>
-                </tr>
-                {{end}}
-                </tbody>
-            </table>
-        </div>
-        <div class="panel-footer">
-            {{template "paginator/default.html" .}}
-        </div>
-        {{else}}
-        <div class="panel-body">
-            <p class="text-muted text-center">请选择一个空间查看回收站</p>
-        </div>
-        {{end}}
+<div id="main-left" class="ui-layout-west">
+    <div class="left-space">
+        <h4 class="text-center"><i class="fa fa-recycle"></i> 回收站</h4>
+        <hr>
+        <ul class="nav nav-sidebar menu-nav">
+            {{range $space := .spaces}}
+            <li {{if eq $.current_space_id $space.space_id}}class="active"{{end}}>
+                <a href="/recycle/index?space_id={{$space.space_id}}" target="mainFrame">
+                    <i class="fa fa-cube"></i>&nbsp;&nbsp;{{$space.name}}
+                </a>
+            </li>
+            {{end}}
+        </ul>
     </div>
 </div>
+<iframe class="ui-layout-center" id="mainFrame" name="mainFrame" width="100%" frameborder="0" scrolling="yes" style="overflow-y: auto" src="/recycle/list?space_id={{.current_space_id}}"></iframe>

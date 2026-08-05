@@ -1,0 +1,74 @@
+<div class="container-fluid">
+    {{if .space.space_id}}
+    <div class="panel panel-default">
+        <div class="panel-heading">
+            <strong><i class="fa fa-recycle"></i> {{.space.name}} - 回收站</strong>
+            <span class="text-muted">&nbsp;&nbsp;保留天数：{{if eq .space.recycle_keep_days "0"}}立即删除{{else}}{{.space.recycle_keep_days}}天{{end}}</span>
+            <div class="pull-right">
+                <button type="button" class="btn btn-danger btn-xs" onclick="Layers.confirm('确定要清空该空间回收站吗？所有文档将无法恢复！', '/recycle/clear?space_id={{.space.space_id}}');">
+                    <i class="fa fa-trash"></i> 清空回收站
+                </button>
+            </div>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-bordered">
+                <thead>
+                <tr>
+                    <th class="w25p">文档名称</th>
+                    <th class="w10p">类型</th>
+                    <th class="w12p">删除人</th>
+                    <th class="w15p">删除时间</th>
+                    <th class="w10p">剩余天数</th>
+                    <th class="w18p">操作</th>
+                </tr>
+                </thead>
+                <tbody>
+                {{range $doc := .documents}}
+                <tr>
+                    <td>
+                        <i class="fa {{if eq $doc.type "2"}}fa-folder-o{{else}}fa-file-text-o{{end}}"></i>
+                        {{$doc.name}}
+                    </td>
+                    <td class="center">
+                        {{if eq $doc.type "2"}}
+                        <span class="label label-warning">目录</span>
+                        {{else}}
+                        <span class="label label-primary">页面</span>
+                        {{end}}
+                    </td>
+                    <td class="center">{{$doc.delete_username}}</td>
+                    <td class="center">{{dateFormat $doc.deleted_time "Y-m-d H:i:s"}}</td>
+                    <td class="center">
+                        <span class="label label-info">{{$doc.remain_days}}天</span>
+                    </td>
+                    <td class="center">
+                        <button type="button" class="btn btn-success btn-xs" onclick="Layers.confirm('确定要恢复该文档吗？', '/recycle/recover?document_id={{$doc.document_id}}');">
+                            <i class="fa fa-undo"></i> 恢复
+                        </button>
+                        <button type="button" class="btn btn-danger btn-xs" onclick="Layers.confirm('彻底删除后无法恢复，确定要删除吗？', '/recycle/remove?document_id={{$doc.document_id}}');">
+                            <i class="fa fa-trash"></i> 彻底删除
+                        </button>
+                    </td>
+                </tr>
+                {{end}}
+                {{if eq (len .documents) 0}}
+                <tr>
+                    <td colspan="6" class="center text-muted">回收站为空</td>
+                </tr>
+                {{end}}
+                </tbody>
+            </table>
+        </div>
+        <div class="panel-footer">
+            {{template "paginator/default.html" .}}
+        </div>
+    </div>
+    {{else}}
+    <div class="panel panel-default">
+        <div class="panel-body text-center text-muted" style="min-height: 400px; padding-top: 100px;">
+            <i class="fa fa-recycle" style="font-size: 60px; color: #ccc;"></i>
+            <h4>请从左侧选择一个空间查看回收站</h4>
+        </div>
+    </div>
+    {{end}}
+</div>
