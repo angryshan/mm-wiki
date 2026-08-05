@@ -29,6 +29,7 @@
                 <th class="w8p">访问级别</th>
                 <th class="w8p">分享</th>
                 <th class="w8p">导出</th>
+                <th class="w8p">回收站</th>
                 <th class="w17p">操作</th>
             </tr>
             </thead>
@@ -60,6 +61,13 @@
                     <span class="label label-success">是</span>
                 {{else}}
                     <span class="label label-danger">否</span>
+                {{end}}
+                </td>
+                <td class="center">
+                {{if eq $space.recycle_keep_days "0"}}
+                    <span class="label label-danger">立即删除</span>
+                {{else}}
+                    <span class="label label-info">{{$space.recycle_keep_days}}天</span>
                 {{end}}
                 </td>
                 <td class="center">

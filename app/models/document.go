@@ -755,3 +755,248 @@ func (d *Document) GetDocumentContentByDocument(doc map[string]string) (content 
 	}
 	return content, pageFile, nil
 }
+
+// ==================== 回收站相关方法 ====================
+
+// 软删除文档（进入回收站）：标记 is_delete=1, deleted_time=now，不删文件
+func (d *Document) SoftDelete(documentId string, spaceId string, userId string) (err error) {
+	db := G.DB()
+	_, err = db.Exec(db.AR().Update(Table_Document_Name, map[string]interface{}{
+		"is_delete":    Document_Delete_True,
+		"deleted_time": time.Now().Unix(),
+		"update_time":  time.Now().Unix(),
+		"edit_user_id": userId,
+	}, map[string]interface{}{
+		"document_id": documentId,
+	}))
+	if err != nil {
+		return
+	}
+
+	// create document log
+	go func(userId, documentId, spaceId string) {
+		_, err := LogDocumentModel.DeleteAction(userId, documentId, spaceId)
+		if err != nil {
+			logs.Error("soft delete document add log err=%s", err.Error())
+		}
+	}(userId, documentId, spaceId)
+
+	return
+}
+
+// 恢复文档（从回收站还原）：is_delete=0, deleted_time=0
+func (d *Document) RecoverDocument(documentId string) (err error) {
+	db := G.DB()
+	_, err = db.Exec(db.AR().Update(Table_Document_Name, map[string]interface{}{
+		"is_delete":    Document_Delete_False,
+		"deleted_time": 0,
+		"update_time":  time.Now().Unix(),
+	}, map[string]interface{}{
+		"document_id": documentId,
+	}))
+	return
+}
+
+// 彻底删除文档（物理删文件 + 删数据库记录）
+func (d *Document) PermanentlyDelete(documentId string) (err error) {
+	document, err := d.GetDeletedDocumentByDocumentId(documentId)
+	if err != nil || len(document) == 0 {
+		return
+	}
+
+	spaceId := document["space_id"]
+	userId := document["edit_user_id"]
+
+	// 获取文件路径（用于物理删除）
+	// 回收站中的文档，父文档可能已被删，用 GetParentDocumentsByDocument 可能失败
+	// 所以用原始路径信息直接计算
+	pageFile, fileErr := d.GetPageFileByDocument(document)
+	if fileErr != nil {
+		logs.Error("get deleted document page file err: %s", fileErr.Error())
+	}
+
+	// 物理删除文件
+	if pageFile != "" {
+		_ = utils.Document.Delete(pageFile, utils.Convert.StringToInt(document["type"]))
+	}
+
+	// 删除附件文件和数据库记录
+	_ = AttachmentModel.DeleteAttachmentsDBFileByDocumentId(documentId)
+
+	// 删除数据库记录
+	db := G.DB()
+	_, err = db.Exec(db.AR().Delete(Table_Document_Name, map[string]interface{}{
+		"document_id": documentId,
+	}))
+	if err != nil {
+		return
+	}
+
+	// delete follow doc
+	go func(documentId string) {
+		_ = FollowModel.DeleteByObjectIdType(documentId, fmt.Sprintf("%d", Follow_Type_Doc))
+	}(documentId)
+
+	// delete collect doc
+	go func(documentId string) {
+		_ = CollectionModel.DeleteByResourceIdType(documentId, fmt.Sprintf("%d", Collection_Type_Doc))
+	}(documentId)
+
+	// create document log
+	go func(userId, documentId, spaceId string) {
+		_, _ = LogDocumentModel.DeleteAction(userId, documentId, spaceId)
+	}(userId, documentId, spaceId)
+
+	return
+}
+
+// 获取回收站中的文档（通过 document_id，不限制 is_delete）
+func (d *Document) GetDeletedDocumentByDocumentId(documentId string) (document map[string]string, err error) {
+	db := G.DB()
+	var rs *mysql.ResultSet
+	rs, err = db.Query(db.AR().From(Table_Document_Name).Where(map[string]interface{}{
+		"document_id":  documentId,
+		"is_delete":    Document_Delete_True,
+		"deleted_time >": 0,
+	}))
+	if err != nil {
+		return
+	}
+	document = rs.Row()
+	return
+}
+
+// 获取某空间下回收站中的文档列表（分页）
+func (d *Document) GetDeletedDocumentsBySpaceId(spaceId string, limit int, number int) (documents []map[string]string, err error) {
+	db := G.DB()
+	var rs *mysql.ResultSet
+	rs, err = db.Query(db.AR().From(Table_Document_Name).Where(map[string]interface{}{
+		"space_id":      spaceId,
+		"is_delete":     Document_Delete_True,
+		"deleted_time >": 0,
+		"parent_id >":   "0",
+	}).OrderBy("deleted_time", "DESC").Limit(limit, number))
+	if err != nil {
+		return
+	}
+	documents = rs.Rows()
+	return
+}
+
+// 统计某空间下回收站文档数量
+func (d *Document) CountDeletedDocumentsBySpaceId(spaceId string) (count int64, err error) {
+	db := G.DB()
+	var rs *mysql.ResultSet
+	rs, err = db.Query(
+		db.AR().
+			Select("count(*) as total").
+			From(Table_Document_Name).
+			Where(map[string]interface{}{
+				"space_id":      spaceId,
+				"is_delete":     Document_Delete_True,
+				"deleted_time >": 0,
+				"parent_id >":   "0",
+			}))
+	if err != nil {
+		return
+	}
+	count = utils.NewConvert().StringToInt64(rs.Value("total"))
+	return
+}
+
+// 获取所有已过期需要彻底删除的回收站文档
+// 条件：is_delete=1 AND deleted_time > 0 AND (now - deleted_time) > space.recycle_keep_days * 86400
+func (d *Document) GetExpiredDeletedDocuments() (documents []map[string]string, err error) {
+	documents = []map[string]string{}
+
+	// 获取所有空间
+	spaces, err := SpaceModel.GetSpaces()
+	if err != nil {
+		return
+	}
+
+	now := time.Now().Unix()
+
+	for _, space := range spaces {
+		keepDays := utils.Convert.StringToInt64(space["recycle_keep_days"])
+		// 只处理 keepDays > 0 的情况（有保留期限的空间）
+		if keepDays <= 0 {
+			continue
+		}
+
+		expireTime := now - keepDays*86400
+		// 查询该空间下已过期的回收站文档
+		db := G.DB()
+		var rs *mysql.ResultSet
+		rs, err = db.Query(db.AR().From(Table_Document_Name).Where(map[string]interface{}{
+			"space_id":        space["space_id"],
+			"is_delete":       Document_Delete_True,
+			"deleted_time >":  0,
+			"deleted_time <":  expireTime,
+			"parent_id >":     "0",
+		}))
+		if err != nil {
+			logs.Error("get expired documents for space %s err: %s", space["space_id"], err.Error())
+			continue
+		}
+		documents = append(documents, rs.Rows()...)
+	}
+	return
+}
+
+// 获取空间下 recycle_keep_days=0 且已软删除的文档（应立即删除的）
+func (d *Document) GetImmediatelyDeleteDocuments() (documents []map[string]string, err error) {
+	documents = []map[string]string{}
+
+	// 获取所有 recycle_keep_days=0 的空间
+	spaces, err := SpaceModel.GetSpaces()
+	if err != nil {
+		return
+	}
+
+	for _, space := range spaces {
+		keepDays := utils.Convert.StringToInt64(space["recycle_keep_days"])
+		if keepDays != 0 {
+			continue
+		}
+
+		// 查询该空间下已软删除的文档
+		db := G.DB()
+		var rs *mysql.ResultSet
+		rs, err = db.Query(db.AR().From(Table_Document_Name).Where(map[string]interface{}{
+			"space_id":       space["space_id"],
+			"is_delete":      Document_Delete_True,
+			"deleted_time >": 0,
+			"parent_id >":    "0",
+		}))
+		if err != nil {
+			logs.Error("get immediately delete documents for space %s err: %s", space["space_id"], err.Error())
+			continue
+		}
+		documents = append(documents, rs.Rows()...)
+	}
+	return
+}
+
+// 根据文档的 path + name + type 计算文件路径（用于回收站文档，避免查父文档）
+func (d *Document) GetPageFileByDocument(document map[string]string) (pageFile string, err error) {
+	if document["parent_id"] == "0" {
+		pageFile = utils.Document.GetDefaultPageFileBySpaceName(document["name"])
+	} else {
+		// path 存的是 "0,1,2" 这样的父文档ID链
+		// 回收站中父文档可能也被删了，用 GetAllDocumentsByDocumentIds 获取（不过滤 is_delete）
+		pathIds := strings.Split(document["path"], ",")
+		parentDocuments, pErr := d.GetAllDocumentsByDocumentIds(pathIds)
+		if pErr != nil {
+			err = pErr
+			return
+		}
+		var parentPath = ""
+		for _, parentDocument := range parentDocuments {
+			parentPath += parentDocument["name"] + "/"
+		}
+		parentPath = strings.TrimRight(parentPath, "/")
+		pageFile = utils.Document.GetPageFileByParentPath(document["name"], utils.Convert.StringToInt(document["type"]), parentPath)
+	}
+	return
+}

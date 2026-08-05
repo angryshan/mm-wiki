@@ -29,6 +29,7 @@ func initRouter() {
 	beego.AutoRouter(&controllers.UserController{})
 	beego.AutoRouter(&controllers.DocumentController{})
 	beego.AutoRouter(&controllers.PageController{})
+	beego.AutoRouter(&controllers.RecycleController{})
 	beego.AutoRouter(&controllers.ImageController{})
 	beego.AutoRouter(&controllers.AttachmentController{})
 

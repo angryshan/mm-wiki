@@ -51,14 +51,20 @@ func (this *SpaceController) Save() {
 		this.jsonError("空间名已经存在！")
 	}
 
+	recycleKeepDays, _ := this.GetInt("recycle_keep_days", 30)
+	if recycleKeepDays < 0 {
+		recycleKeepDays = 30
+	}
+
 	// create space database
 	spaceId, err := models.SpaceModel.Insert(map[string]interface{}{
-		"name":        name,
-		"description": description,
-		"tags":        tags,
-		"visit_level": strings.ToLower(visitLevel),
-		"is_share":    isShare,
-		"is_export":   isExport,
+		"name":              name,
+		"description":       description,
+		"tags":              tags,
+		"visit_level":       strings.ToLower(visitLevel),
+		"is_share":          isShare,
+		"is_export":         isExport,
+		"recycle_keep_days": recycleKeepDays,
 	})
 	if err != nil {
 		this.ErrorLog("添加空间失败：" + err.Error())
@@ -161,6 +167,10 @@ func (this *SpaceController) Modify() {
 	visitLevel := strings.TrimSpace(this.GetString("visit_level", "public"))
 	isShare := strings.TrimSpace(this.GetString("is_share", "0"))
 	isExport := strings.TrimSpace(this.GetString("is_export", "0"))
+	recycleKeepDays, _ := this.GetInt("recycle_keep_days", 30)
+	if recycleKeepDays < 0 {
+		recycleKeepDays = 30
+	}
 
 	if spaceId == "" {
 		this.jsonError("空间不存在！")
@@ -191,12 +201,13 @@ func (this *SpaceController) Modify() {
 	}
 
 	spaceValue := map[string]interface{}{
-		"name":        name,
-		"description": description,
-		"tags":        tags,
-		"visit_level": visitLevel,
-		"is_share":    isShare,
-		"is_export":   isExport,
+		"name":              name,
+		"description":       description,
+		"tags":              tags,
+		"visit_level":       visitLevel,
+		"is_share":          isShare,
+		"is_export":         isExport,
+		"recycle_keep_days": recycleKeepDays,
 	}
 	// update space document dir name if name update
 	_, err = models.SpaceModel.UpdateDBAndSpaceFileName(spaceId, spaceValue, space["name"])

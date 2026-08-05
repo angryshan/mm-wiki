@@ -464,28 +464,42 @@ func (this *DocumentController) Delete() {
 		this.jsonError("您没有权限删除该空间下的文档！")
 	}
 
-	_, pageFile, err := models.DocumentModel.GetParentDocumentsByDocument(document)
-	if err != nil {
-		this.ErrorLog("删除文档 " + documentId + " 失败：" + err.Error())
-		this.jsonError("删除文档失败！")
-	}
+	// 获取空间的回收站保留天数
+	recycleKeepDays := utils.Convert.StringToInt(space["recycle_keep_days"])
 
-	err = models.DocumentModel.DeleteDBAndFile(documentId, spaceId, this.UserId, pageFile, document["type"])
-	if err != nil {
-		this.ErrorLog("删除文档 " + documentId + " 失败：" + err.Error())
-		this.jsonError("删除文档失败！")
+	// 如果 recycle_keep_days == 0，立即彻底删除（保持原有逻辑）
+	if recycleKeepDays == 0 {
+		_, pageFile, err := models.DocumentModel.GetParentDocumentsByDocument(document)
+		if err != nil {
+			this.ErrorLog("删除文档 " + documentId + " 失败：" + err.Error())
+			this.jsonError("删除文档失败！")
+		}
+		err = models.DocumentModel.DeleteDBAndFile(documentId, spaceId, this.UserId, pageFile, document["type"])
+		if err != nil {
+			this.ErrorLog("删除文档 " + documentId + " 失败：" + err.Error())
+			this.jsonError("删除文档失败！")
+		}
+		// delete attachment
+		err = models.AttachmentModel.DeleteAttachmentsDBFileByDocumentId(documentId)
+		if err != nil {
+			this.ErrorLog("删除文档 " + documentId + " 附件失败：" + err.Error())
+		}
+		// 删除文档索引
+		go func(documentId string) {
+			services.DocIndexService.ForceDelDocIdIndex(documentId)
+		}(documentId)
+	} else {
+		// 软删除：进入回收站，不删文件
+		err = models.DocumentModel.SoftDelete(documentId, spaceId, this.UserId)
+		if err != nil {
+			this.ErrorLog("删除文档 " + documentId + " 失败：" + err.Error())
+			this.jsonError("删除文档失败！")
+		}
+		// 删除文档搜索索引（回收站文档不应被搜索到）
+		go func(documentId string) {
+			services.DocIndexService.ForceDelDocIdIndex(documentId)
+		}(documentId)
 	}
-
-	// delete attachment
-	err = models.AttachmentModel.DeleteAttachmentsDBFileByDocumentId(documentId)
-	if err != nil {
-		this.ErrorLog("删除文档 " + documentId + " 附件失败：" + err.Error())
-	}
-
-	// 删除文档索引
-	go func(documentId string) {
-		services.DocIndexService.ForceDelDocIdIndex(documentId)
-	}(documentId)
 
 	this.InfoLog("删除文档 " + documentId + " 成功")
 	this.jsonSuccess("删除文档成功", "", "/document/index?document_id="+document["parent_id"])

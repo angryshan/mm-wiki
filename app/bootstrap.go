@@ -55,6 +55,7 @@ func init() {
 	initDocumentDir()
 	//initSearch()
 	//initWork()
+	initRecycleWork()
 	StartTime = time.Now().Unix()
 }
 
@@ -268,4 +269,8 @@ func initSearch() {
 
 func initWork() {
 	work.DocSearchWorker.Start()
+}
+
+func initRecycleWork() {
+	work.DocRecycleWorker.Start()
 }
