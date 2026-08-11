@@ -5,9 +5,11 @@
             <strong><i class="fa fa-recycle"></i> {{.space.name}} - 回收站</strong>
             <span class="text-muted">&nbsp;&nbsp;保留天数：{{if eq .space.recycle_keep_days "0"}}立即删除{{else}}{{.space.recycle_keep_days}}天{{end}}</span>
             <div class="pull-right">
+                {{if .is_manager}}
                 <button type="button" class="btn btn-danger btn-xs" onclick="Layers.confirm('确定要清空该空间回收站吗？所有文档将无法恢复！', '/recycle/clear?space_id={{.space.space_id}}');">
                     <i class="fa fa-trash"></i> 清空回收站
                 </button>
+                {{end}}
             </div>
         </div>
         <div class="table-responsive">
@@ -19,7 +21,7 @@
                     <th class="w12p">删除人</th>
                     <th class="w15p">删除时间</th>
                     <th class="w10p">剩余天数</th>
-                    <th class="w18p">操作</th>
+                    {{if .is_manager}}<th class="w18p">操作</th>{{end}}
                 </tr>
                 </thead>
                 <tbody>
@@ -41,6 +43,7 @@
                     <td class="center">
                         <span class="label label-info">{{$doc.remain_days}}天</span>
                     </td>
+                    {{if $.is_manager}}
                     <td class="center">
                         <button type="button" class="btn btn-success btn-xs" onclick="Layers.confirm('确定要恢复该文档吗？', '/recycle/recover?document_id={{$doc.document_id}}');">
                             <i class="fa fa-undo"></i> 恢复
@@ -49,11 +52,12 @@
                             <i class="fa fa-trash"></i> 彻底删除
                         </button>
                     </td>
+                    {{end}}
                 </tr>
                 {{end}}
                 {{if eq (len .documents) 0}}
                 <tr>
-                    <td colspan="6" class="center text-muted">回收站为空</td>
+                    <td colspan="{{if .is_manager}}6{{else}}5{{end}}" class="center text-muted">回收站为空</td>
                 </tr>
                 {{end}}
                 </tbody>

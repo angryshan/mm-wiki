@@ -40,6 +40,7 @@ func (this *RecycleController) List() {
 		this.Data["documents"] = []map[string]string{}
 		this.Data["space"] = map[string]string{}
 		this.Data["count"] = int64(0)
+		this.Data["is_manager"] = false
 		this.viewLayout("recycle/list", "default")
 		return
 	}
@@ -54,10 +55,12 @@ func (this *RecycleController) List() {
 	}
 
 	// 检查权限
-	isVisit, _, _ := this.GetDocumentPrivilege(space)
+	isVisit, _, isManager := this.GetDocumentPrivilege(space)
 	if !isVisit {
 		this.ViewError("您没有权限查看该空间回收站！")
 	}
+
+	this.Data["is_manager"] = isManager
 
 	page, _ := this.GetInt("page", 1)
 	number, _ := this.GetRangeInt("number", 20, 10, 100)
