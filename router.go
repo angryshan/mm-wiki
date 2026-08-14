@@ -29,7 +29,6 @@ func initRouter() {
 	beego.AutoRouter(&controllers.UserController{})
 	beego.AutoRouter(&controllers.DocumentController{})
 	beego.AutoRouter(&controllers.PageController{})
-	beego.AutoRouter(&controllers.RecycleController{})
 	beego.AutoRouter(&controllers.ImageController{})
 	beego.AutoRouter(&controllers.AttachmentController{})
 
@@ -41,6 +40,7 @@ func initRouter() {
 		beego.NSAutoRouter(&systemControllers.PrivilegeController{}),
 		beego.NSAutoRouter(&systemControllers.SpaceController{}),
 		beego.NSAutoRouter(&systemControllers.Space_UserController{}),
+		beego.NSAutoRouter(&systemControllers.RecycleController{}),
 		beego.NSAutoRouter(&systemControllers.LogController{}),
 		beego.NSAutoRouter(&systemControllers.EmailController{}),
 		beego.NSAutoRouter(&systemControllers.LinkController{}),

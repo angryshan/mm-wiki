@@ -13,28 +13,18 @@ type RecycleController struct {
 	BaseController
 }
 
-// 回收站主页面（左侧空间列表 + 右侧 iframe）
-func (this *RecycleController) Index() {
+// 回收站列表页面（iframe 内加载）
+func (this *RecycleController) List() {
 
 	spaceId := this.GetString("space_id", "")
 
 	// 获取所有空间供选择
 	spaces, err := models.SpaceModel.GetSpaces()
 	if err != nil {
-		this.ErrorLog("获取回收站空间列表失败: " + err.Error())
-		this.ViewError("获取回收站失败！", "/main/index")
+		this.ErrorLog("获取空间列表失败: " + err.Error())
+		this.ViewError("获取空间列表失败！", "/system/main/index")
 	}
-
 	this.Data["spaces"] = spaces
-	this.Data["current_space_id"] = spaceId
-
-	this.viewLayout("recycle/index", "space")
-}
-
-// 回收站列表（iframe 内加载）
-func (this *RecycleController) List() {
-
-	spaceId := this.GetString("space_id", "")
 
 	if spaceId == "" {
 		this.Data["documents"] = []map[string]string{}
@@ -45,22 +35,15 @@ func (this *RecycleController) List() {
 		return
 	}
 
-	space, err := models.SpaceModel.GetSpaceBySpaceId(spaceId)
+	var space map[string]string
+	space, err = models.SpaceModel.GetSpaceBySpaceId(spaceId)
 	if err != nil {
 		this.ErrorLog("获取空间失败: " + err.Error())
-		this.ViewError("空间不存在！", "/recycle/index")
+		this.ViewError("空间不存在！", "/system/main/index")
 	}
 	if len(space) == 0 {
-		this.ViewError("空间不存在！", "/recycle/index")
+		this.ViewError("空间不存在！", "/system/main/index")
 	}
-
-	// 检查权限
-	isVisit, _, isManager := this.GetDocumentPrivilege(space)
-	if !isVisit {
-		this.ViewError("您没有权限查看该空间回收站！")
-	}
-
-	this.Data["is_manager"] = isManager
 
 	page, _ := this.GetInt("page", 1)
 	number, _ := this.GetRangeInt("number", 20, 10, 100)
@@ -69,16 +52,16 @@ func (this *RecycleController) List() {
 	count, err := models.DocumentModel.CountDeletedDocumentsBySpaceId(spaceId)
 	if err != nil {
 		this.ErrorLog("获取回收站文档数量失败: " + err.Error())
-		this.ViewError("获取回收站失败！", "/recycle/index")
+		this.ViewError("获取回收站失败！", "/system/main/index")
 	}
 
 	documents, err := models.DocumentModel.GetDeletedDocumentsBySpaceId(spaceId, limit, number)
 	if err != nil {
 		this.ErrorLog("获取回收站文档列表失败: " + err.Error())
-		this.ViewError("获取回收站失败！", "/recycle/index")
+		this.ViewError("获取回收站失败！", "/system/main/index")
 	}
 
-	// 获取文档创建者和删除者信息
+	// 获取文档删除者信息
 	userIds := []string{}
 	for _, doc := range documents {
 		if doc["edit_user_id"] != "" {
@@ -99,7 +82,6 @@ func (this *RecycleController) List() {
 	for _, doc := range documents {
 		doc["delete_username"] = userMap[doc["edit_user_id"]]
 		doc["create_username"] = userMap[doc["create_user_id"]]
-		// 计算剩余天数
 		deletedTime := utils.Convert.StringToInt64(doc["deleted_time"])
 		keepDays := utils.Convert.StringToInt64(space["recycle_keep_days"])
 		expireTime := deletedTime + keepDays*86400
@@ -114,6 +96,7 @@ func (this *RecycleController) List() {
 	this.Data["documents"] = documents
 	this.Data["space"] = space
 	this.Data["count"] = count
+	this.Data["is_manager"] = true // 系统模块下默认有管理权限
 	this.SetPaginator(number, count)
 
 	this.viewLayout("recycle/list", "default")
@@ -141,20 +124,6 @@ func (this *RecycleController) Recover() {
 	}
 
 	spaceId := document["space_id"]
-	space, err := models.SpaceModel.GetSpaceBySpaceId(spaceId)
-	if err != nil {
-		this.ErrorLog("恢复文档失败：" + err.Error())
-		this.jsonError("恢复文档失败！")
-	}
-	if len(space) == 0 {
-		this.jsonError("文档所在空间不存在！")
-	}
-
-	// 检查权限
-	_, _, isManager := this.GetDocumentPrivilege(space)
-	if !isManager {
-		this.jsonError("您没有权限恢复该文档！")
-	}
 
 	err = models.DocumentModel.RecoverDocument(documentId)
 	if err != nil {
@@ -163,7 +132,7 @@ func (this *RecycleController) Recover() {
 	}
 
 	this.InfoLog("恢复文档 " + documentId + " 成功")
-	this.jsonSuccess("恢复文档成功", nil, "/recycle/list?space_id="+spaceId)
+	this.jsonSuccess("恢复文档成功", nil, "/system/recycle/list?space_id="+spaceId)
 }
 
 // 彻底删除文档
@@ -188,20 +157,6 @@ func (this *RecycleController) Remove() {
 	}
 
 	spaceId := document["space_id"]
-	space, err := models.SpaceModel.GetSpaceBySpaceId(spaceId)
-	if err != nil {
-		this.ErrorLog("彻底删除文档失败：" + err.Error())
-		this.jsonError("彻底删除文档失败！")
-	}
-	if len(space) == 0 {
-		this.jsonError("文档所在空间不存在！")
-	}
-
-	// 检查权限
-	_, _, isManager := this.GetDocumentPrivilege(space)
-	if !isManager {
-		this.jsonError("您没有权限彻底删除该文档！")
-	}
 
 	err = models.DocumentModel.PermanentlyDelete(documentId)
 	if err != nil {
@@ -210,7 +165,7 @@ func (this *RecycleController) Remove() {
 	}
 
 	this.InfoLog("彻底删除文档 " + documentId + " 成功")
-	this.jsonSuccess("彻底删除成功", nil, "/recycle/list?space_id="+spaceId)
+	this.jsonSuccess("彻底删除成功", nil, "/system/recycle/list?space_id="+spaceId)
 }
 
 // 清空某空间回收站
@@ -223,21 +178,6 @@ func (this *RecycleController) Clear() {
 	spaceId := this.GetString("space_id", "")
 	if spaceId == "" {
 		this.jsonError("没有选择空间！")
-	}
-
-	space, err := models.SpaceModel.GetSpaceBySpaceId(spaceId)
-	if err != nil {
-		this.ErrorLog("清空回收站失败：" + err.Error())
-		this.jsonError("清空回收站失败！")
-	}
-	if len(space) == 0 {
-		this.jsonError("空间不存在！")
-	}
-
-	// 检查权限
-	_, _, isManager := this.GetDocumentPrivilege(space)
-	if !isManager {
-		this.jsonError("您没有权限清空该空间回收站！")
 	}
 
 	// 获取该空间所有回收站文档
@@ -259,5 +199,5 @@ func (this *RecycleController) Clear() {
 	}
 
 	this.InfoLog(fmt.Sprintf("清空回收站 成功%d 失败%d", successCount, failCount))
-	this.jsonSuccess(fmt.Sprintf("清空完成！成功 %d 个，失败 %d 个", successCount, failCount), nil, "/recycle/list?space_id="+spaceId)
+	this.jsonSuccess(fmt.Sprintf("清空完成！成功 %d 个，失败 %d 个", successCount, failCount), nil, "/system/recycle/list?space_id="+spaceId)
 }
