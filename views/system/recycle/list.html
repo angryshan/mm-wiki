@@ -13,7 +13,7 @@
                             <select class="form-control" name="space_id" onchange="this.form.submit()">
                                 <option value="">-- 全部空间 --</option>
                                 {{range $space := .spaces}}
-                                <option value="{{$space.space_id}}" {{if eq $.space.space_id $space.space_id}}selected{{end}}>{{$space.name}}</option>
+                                <option value="{{$space.space_id}}" {{if eq $.current_space_id $space.space_id}}selected{{end}}>{{$space.name}}</option>
                                 {{end}}
                             </select>
                         </div>
@@ -21,7 +21,7 @@
                 </div>
                 {{if .space.space_id}}
                 <div class="panel-heading">
-                    <span><strong>{{$space.name}}</strong> 回收站</span>
+                    <span><strong>{{.space.name}}</strong> 回收站</span>
                     <span class="text-muted">&nbsp;&nbsp;保留天数：{{if eq .space.recycle_keep_days "0"}}立即删除{{else}}{{.space.recycle_keep_days}}天{{end}}</span>
                     <div class="pull-right">
                         <button type="button" class="btn btn-danger btn-xs" onclick="Layers.confirm('确定要清空该空间回收站吗？所有文档将无法恢复！', '/system/recycle/clear?space_id={{.space.space_id}}');">
@@ -46,7 +46,11 @@
                         <tr>
                             <td>
                                 <i class="fa {{if eq $doc.type "2"}}fa-folder-o{{else}}fa-file-text-o{{end}}"></i>
-                                {{$doc.name}}
+                                {{if eq $doc.type "2"}}
+                                    {{$doc.name}}
+                                {{else}}
+                                    <a href="/system/recycle/view?document_id={{$doc.document_id}}" target="_blank">{{$doc.name}}</a>
+                                {{end}}
                             </td>
                             <td class="center">
                                 {{if eq $doc.type "2"}}

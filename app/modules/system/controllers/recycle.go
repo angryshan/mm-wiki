@@ -25,6 +25,7 @@ func (this *RecycleController) List() {
 		this.ViewError("获取空间列表失败！", "/system/main/index")
 	}
 	this.Data["spaces"] = spaces
+	this.Data["current_space_id"] = spaceId
 
 	if spaceId == "" {
 		this.Data["documents"] = []map[string]string{}
@@ -100,6 +101,63 @@ func (this *RecycleController) List() {
 	this.SetPaginator(number, count)
 
 	this.viewLayout("recycle/list", "default")
+}
+
+// 查看回收站文档内容（新页面打开，复用分享页样式）
+func (this *RecycleController) View() {
+
+	documentId := this.GetString("document_id", "")
+	if documentId == "" {
+		this.ViewError("文档未找到！", "/system/main/index")
+	}
+
+	document, err := models.DocumentModel.GetDeletedDocumentByDocumentId(documentId)
+	if err != nil {
+		this.ErrorLog("查找回收站文档 " + documentId + " 失败：" + err.Error())
+		this.ViewError("查找文档失败！", "/system/main/index")
+	}
+	if len(document) == 0 {
+		this.ViewError("文档不存在或不在回收站中！", "/system/main/index")
+	}
+
+	// 获取父文档路径
+	parentDocuments, pageFile, err := models.DocumentModel.GetParentDocumentsByDocument(document)
+	if err != nil {
+		this.ErrorLog("查找父文档失败：" + err.Error())
+		this.ViewError("查找文档失败！", "/system/main/index")
+	}
+
+	// 获取文档内容
+	documentContent := ""
+	if document["type"] != "2" {
+		documentContent, err = utils.Document.GetContentByPageFile(pageFile)
+		if err != nil {
+			this.ErrorLog("查找文档 " + documentId + " 内容失败：" + err.Error())
+			documentContent = ""
+		}
+	}
+
+	// 获取创建者和修改者
+	users, _ := models.UserModel.GetUsersByUserIds([]string{document["create_user_id"], document["edit_user_id"]})
+	var createUser = map[string]string{}
+	var editUser = map[string]string{}
+	for _, user := range users {
+		if user["user_id"] == document["create_user_id"] {
+			createUser = user
+		}
+		if user["user_id"] == document["edit_user_id"] {
+			editUser = user
+		}
+	}
+
+	this.Data["create_user"] = createUser
+	this.Data["edit_user"] = editUser
+	this.Data["document"] = document
+	this.Data["page_content"] = documentContent
+	this.Data["parent_documents"] = parentDocuments
+
+	// 直接复用全局的 page/display 视图和 document_share 布局
+	this.ViewLayout("page/display", "layouts/document_share")
 }
 
 // 恢复文档
