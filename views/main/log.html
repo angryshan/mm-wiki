@@ -1,0 +1,35 @@
+{{$logDocuments := .logDocuments}}
+<div class="document-update" style="margin-top: -5px;">
+    <ul>
+        {{range $logDocument := $logDocuments}}
+        <li>
+            <div>
+                {{if or (eq $logDocument.action "3") (eq $logDocument.action "6") (eq $logDocument.action "7")}}
+                    {{if eq $logDocument.document_type "1"}}
+                        <i class="fa fa-file-word-o"></i>
+                    {{else}}
+                        <i class="fa fa-folder-o"></i>
+                    {{end}}
+                    {{$logDocument.document_name}}
+                {{else}}
+                <a href="/document/index?document_id={{$logDocument.document_id}}" target="_parent" class="text text-info text-font-15">
+                    {{if eq $logDocument.document_type "1"}}
+                        <i class="fa fa-file-word-o"></i>
+                    {{else}}
+                        <i class="fa fa-folder-o"></i>
+                    {{end}}
+                     {{$logDocument.document_name}}</a>
+                {{end}}
+            </div>
+            <span class="text text-font-12 document-user-time"><i class="fa fa-calendar"></i> 被
+            {{if eq $logDocument.user_id $.login_user_id}}
+                <a href="/system/main/index" target="_parent">{{$logDocument.username}}（{{$logDocument.given_name}}）<span class="text text-primary"></span> </a>
+            {{else}}
+                <a href="/user/info?user_id={{$logDocument.user_id}}">{{$logDocument.username}}（{{$logDocument.given_name}}）<span class="text text-primary"></span> </a>
+            {{end}}
+            {{if eq $logDocument.action "1"}}创建{{else if eq $logDocument.action "2"}}修改{{else if eq $logDocument.action "3"}}删除{{else if eq $logDocument.action "5"}}恢复{{else if eq $logDocument.action "6"}}彻底删除{{else if eq $logDocument.action "7"}}清空回收站{{end}}于 {{dateFormat $logDocument.create_time "Y-m-d H:i:s"}}</span>
+        </li>
+        <hr>
+        {{end}}
+    </ul>
+</div>

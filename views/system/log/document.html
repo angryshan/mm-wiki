@@ -60,15 +60,17 @@
                     {{else if eq $logDocument.action "3"}}
                         <label class="text text-danger">删除</label>
                     {{else if eq $logDocument.action "4"}}
-                        <label class="text text-success">恢复</label>
+                        <label class="text text-muted">阅读</label>
                     {{else if eq $logDocument.action "5"}}
-                        <label class="text text-warning">彻底删除</label>
+                        <label class="text text-success">恢复</label>
                     {{else if eq $logDocument.action "6"}}
+                        <label class="text text-warning">彻底删除</label>
+                    {{else if eq $logDocument.action "7"}}
                         <label class="text text-default">清空回收站</label>
                     {{end}}
                     </td>
                     <td>
-                    {{if or (eq $logDocument.action "3") (eq $logDocument.action "5") (eq $logDocument.action "6")}}
+                    {{if or (eq $logDocument.action "3") (eq $logDocument.action "6") (eq $logDocument.action "7")}}
                        {{$logDocument.document_name}}
                     {{else}}
                         <a href="/document/index?document_id={{$logDocument.document_id}}" target="_parent">{{$logDocument.document_name}}</a>

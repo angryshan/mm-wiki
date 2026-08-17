@@ -4,11 +4,32 @@
         <div class="panel-body">
             <div class="row">
             </div>
+            {{if eq .logReadActionStatus true}}
+            <table class="table">
+                <thead>
+                <tr>
+                    <td class="w10p text-left"><strong>7日阅读人数</strong></td>
+                    <td class="w10p text-left"><strong>7日阅读次数</strong></td>
+                    <td class="w10p text-left"><strong>总阅读人数</strong></td>
+                    <td class="w10p text-left"><strong>总阅读次数</strong></td>
+                </tr>
+                </thead>
+                <tbody>
+                <tr>{{$logReadActionCounts := .logReadActionCounts}}
+                    <td>{{$logReadActionCounts.num7day}}</td>
+                    <td>{{$logReadActionCounts.count7day}}</td>
+                    <td>{{$logReadActionCounts.num}}</td>
+                    <td>{{$logReadActionCounts.count}}</td>
+                </tr>
+                </tbody>
+            </table>
+            {{end}}
             <br>
             <table class="table">
                 <thead>
                 <tr>
                     <td class="w10p text-left"><strong>用户</strong></td>
+                    <td class="w10p text-left"><strong>姓名</strong></td>
                     <td class="w10p text-left"><strong>操作</strong></td>
                     <td class=""><strong>备注</strong></td>
                     <td class="w20p center"><strong>时间</strong></td>
@@ -18,6 +39,7 @@
                 {{range $logDocument := .logDocuments}}
                 <tr>
                     <td>{{$logDocument.username}}</td>
+                    <td>{{$logDocument.given_name}}</td>
                     <td>
                     {{if eq $logDocument.action "1"}}
                         <label class="text text-info">创建</label>
@@ -26,10 +48,12 @@
                     {{else if eq $logDocument.action "3"}}
                         <label class="text text-danger">删除</label>
                     {{else if eq $logDocument.action "4"}}
-                        <label class="text text-success">恢复</label>
+                         <label class="text text-muted">阅读</label>
                     {{else if eq $logDocument.action "5"}}
-                        <label class="text text-warning">彻底删除</label>
+                        <label class="text text-success">恢复</label>
                     {{else if eq $logDocument.action "6"}}
+                        <label class="text text-warning">彻底删除</label>
+                    {{else if eq $logDocument.action "7"}}
                         <label class="text text-default">清空回收站</label>
                     {{end}}
                     </td>

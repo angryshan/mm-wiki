@@ -7,7 +7,7 @@
                 <p>{{.panel_description}}</p>
             </div>
         </div>{{$logDocuments := .logDocuments}}
-        <div class="col-md-7">
+        <div class="col-md-6">
             <div class="panel panel-default">
                 <div class="panel-heading"><strong><i class="fa fa-file-word-o"></i>  最近更新文档</strong></div>
                 <div class="panel-body" style="min-height: 550px">
@@ -16,7 +16,7 @@
                             {{range $logDocument := $logDocuments}}
                             <li>
                                 <div>
-                                    {{if or (eq $logDocument.action "3") (eq $logDocument.action "5") (eq $logDocument.action "6")}}
+                                    {{if or (eq $logDocument.action "3") (eq $logDocument.action "6") (eq $logDocument.action "7")}}
                                         {{if eq $logDocument.document_type "1"}}
                                             <i class="fa fa-file-word-o"></i>
                                         {{else}}
@@ -39,7 +39,7 @@
                                 {{else}}
                                     <a href="/user/info?user_id={{$logDocument.user_id}}">{{$logDocument.username}}（{{$logDocument.given_name}}）<span class="text text-primary"></span> </a>
                                 {{end}}
-                                {{if eq $logDocument.action "1"}}创建{{else if eq $logDocument.action "2"}}修改{{else if eq $logDocument.action "3"}}删除{{else if eq $logDocument.action "4"}}恢复{{else if eq $logDocument.action "5"}}彻底删除{{else if eq $logDocument.action "6"}}清空回收站{{end}}于 {{dateFormat $logDocument.create_time "Y-m-d H:i:s"}}</span>
+                                {{if eq $logDocument.action "1"}}创建{{else if eq $logDocument.action "2"}}修改{{else if eq $logDocument.action "3"}}删除{{else if eq $logDocument.action "5"}}恢复{{else if eq $logDocument.action "6"}}彻底删除{{else if eq $logDocument.action "7"}}清空回收站{{end}}于 {{dateFormat $logDocument.create_time "Y-m-d H:i:s"}}</span>
                             </li>
                             <hr>
                             {{end}}
@@ -51,7 +51,15 @@
                 </div>
             </div>
         </div>
-        <div class="col-md-5">
+        <div class="col-md-6">
+            <div class="panel panel-default" style="height: 360px">
+                <div class="panel-heading"><strong><i class="fa fa-address-book-o"></i> 个人更新文档</strong></div>
+                <div class="panel-body">
+                    <iframe class="ui-layout-center" id="logFrame" name="logFrame"  width="100%" height="303px" frameborder="0" scrolling="yes" style="overflow-y: auto" src="/main/log"></iframe>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
             <div class="panel panel-default" style="min-height: 300px">
                 <div class="panel-heading"><strong><i class="fa fa-internet-explorer"></i> 快捷链接</strong></div>
                 <div class="panel-body">
@@ -65,8 +73,8 @@
                 </div>
             </div>
         </div>
-        <div class="col-md-5" >
-            <div class="panel panel-default" style="min-height: 300px">
+        <div class="col-md-6" >
+            <div class="panel panel-default" style="min-height: 93px">
                 <div class="panel-heading"><strong><i class="fa fa-address-book-o"></i> 系统联系人</strong></div>
                 <div class="panel-body">
                     <ul class="list-group">
