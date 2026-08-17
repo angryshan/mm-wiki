@@ -1,15 +1,19 @@
 package models
 
 import (
+	"fmt"
 	"github.com/phachon/mm-wiki/app/utils"
 	"github.com/snail007/go-activerecord/mysql"
 	"time"
 )
 
 const (
-	LogDocument_Action_Create = 1
-	LogDocument_Action_Update = 2
-	LogDocument_Action_Delete = 3
+	LogDocument_Action_Create   = 1
+	LogDocument_Action_Update   = 2
+	LogDocument_Action_Delete   = 3
+	LogDocument_Action_Recover  = 4 // 回收站恢复文档
+	LogDocument_Action_PermDel  = 5 // 彻底删除文档
+	LogDocument_Action_Clear   = 6 // 清空回收站
 )
 
 const Table_LogDocument_Name = "log_document"
@@ -74,6 +78,42 @@ func (ld *LogDocument) DeleteAction(userId string, documentId string, spaceId st
 		"space_id":    spaceId,
 		"comment":     "删除了该文档",
 		"action":      LogDocument_Action_Delete,
+		"create_time": time.Now().Unix(),
+	}
+	return ld.Insert(logDocument)
+}
+
+func (ld *LogDocument) RecoverAction(userId string, documentId string, spaceId string) (id int64, err error) {
+	logDocument := map[string]interface{}{
+		"user_id":     userId,
+		"document_id": documentId,
+		"space_id":    spaceId,
+		"comment":     "从回收站恢复了该文档",
+		"action":      LogDocument_Action_Recover,
+		"create_time": time.Now().Unix(),
+	}
+	return ld.Insert(logDocument)
+}
+
+func (ld *LogDocument) PermanentlyDeleteAction(userId string, documentId string, spaceId string) (id int64, err error) {
+	logDocument := map[string]interface{}{
+		"user_id":     userId,
+		"document_id": documentId,
+		"space_id":    spaceId,
+		"comment":     "彻底删除了该文档（回收站）",
+		"action":      LogDocument_Action_PermDel,
+		"create_time": time.Now().Unix(),
+	}
+	return ld.Insert(logDocument)
+}
+
+func (ld *LogDocument) ClearRecycleAction(userId string, spaceId string, count int) (id int64, err error) {
+	logDocument := map[string]interface{}{
+		"user_id":     userId,
+		"document_id": "0",
+		"space_id":    spaceId,
+		"comment":     fmt.Sprintf("清空了回收站，共 %d 个文档", count),
+		"action":      LogDocument_Action_Clear,
 		"create_time": time.Now().Unix(),
 	}
 	return ld.Insert(logDocument)

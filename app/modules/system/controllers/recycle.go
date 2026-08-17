@@ -189,6 +189,11 @@ func (this *RecycleController) Recover() {
 		this.jsonError("恢复文档失败！")
 	}
 
+	// 记录恢复文档日志
+	go func(userId, docId, spcId string) {
+		_, _ = models.LogDocumentModel.RecoverAction(userId, docId, spcId)
+	}(this.UserId, documentId, spaceId)
+
 	this.InfoLog("恢复文档 " + documentId + " 成功")
 	this.jsonSuccess("恢复文档成功", nil, "/system/recycle/list?space_id="+spaceId)
 }
@@ -221,6 +226,11 @@ func (this *RecycleController) Remove() {
 		this.ErrorLog("彻底删除文档 " + documentId + " 失败：" + err.Error())
 		this.jsonError("彻底删除文档失败！")
 	}
+
+	// 记录彻底删除文档日志
+	go func(userId, docId, spcId string) {
+		_, _ = models.LogDocumentModel.PermanentlyDeleteAction(userId, docId, spcId)
+	}(this.UserId, documentId, spaceId)
 
 	this.InfoLog("彻底删除文档 " + documentId + " 成功")
 	this.jsonSuccess("彻底删除成功", nil, "/system/recycle/list?space_id="+spaceId)
@@ -255,6 +265,11 @@ func (this *RecycleController) Clear() {
 			successCount++
 		}
 	}
+
+	// 记录清空回收站日志
+	go func(userId, spcId string, count int) {
+		_, _ = models.LogDocumentModel.ClearRecycleAction(userId, spcId, count)
+	}(this.UserId, spaceId, successCount)
 
 	this.InfoLog(fmt.Sprintf("清空回收站 成功%d 失败%d", successCount, failCount))
 	this.jsonSuccess(fmt.Sprintf("清空完成！成功 %d 个，失败 %d 个", successCount, failCount), nil, "/system/recycle/list?space_id="+spaceId)
