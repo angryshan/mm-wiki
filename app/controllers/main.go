@@ -75,25 +75,7 @@ func (this *MainController) Default() {
 		this.ErrorLog("查找文档信息失败：" + err.Error())
 		this.ViewError("查找更新文档列表失败！")
 	}
-	for _, logDocument := range logDocuments {
-		logDocument["username"] = ""
-		logDocument["document_name"] = "已删除文档(" + logDocument["document_id"] + ")"
-		logDocument["document_type"] = "1"
-		for _, user := range users {
-			if logDocument["user_id"] == user["user_id"] {
-				logDocument["username"] = user["username"]
-				logDocument["given_name"] = user["given_name"]
-				break
-			}
-		}
-		for _, doc := range docs {
-			if logDocument["document_id"] == doc["document_id"] {
-				logDocument["document_name"] = doc["name"]
-				logDocument["document_type"] = doc["type"]
-				break
-			}
-		}
-	}
+	models.LogDocumentModel.AttachDocuments(logDocuments, users, docs)
 
 	// link
 	links, err := models.LinkModel.GetLinksOrderBySequence()

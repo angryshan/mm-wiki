@@ -34,18 +34,13 @@ func (this *ProfileController) Info() {
 		this.ViewError("查找用户活动出错", "/main/index")
 	}
 
+	// 查用户信息（Info 页面没有单独查 users）
+	userIds := []string{}
 	for _, logDocument := range logDocuments {
-		logDocument["document_name"] = "已删除文档(" + logDocument["document_id"] + ")"
-		logDocument["document_type"] = "1"
-		for _, document := range documents {
-			if document["document_id"] == logDocument["document_id"] {
-				logDocument["document_id"] = document["document_id"]
-				logDocument["document_name"] = document["name"]
-				logDocument["document_type"] = document["type"]
-				logDocument["update_time"] = document["update_time"]
-			}
-		}
+		userIds = append(userIds, logDocument["user_id"])
 	}
+	users, _ := models.UserModel.GetUsersByUserIds(userIds)
+	models.LogDocumentModel.AttachDocuments(logDocuments, users, documents)
 
 	this.Data["logDocuments"] = logDocuments
 	this.Data["count"] = len(logDocuments)
@@ -254,25 +249,7 @@ func (this *ProfileController) Activity() {
 		this.ErrorLog("我的活动查找失败：" + err.Error())
 		this.ViewError("我的活动查找失败！", "/system/main/index")
 	}
-	for _, logDocument := range logDocuments {
-		logDocument["username"] = ""
-		logDocument["document_name"] = "已删除文档(" + logDocument["document_id"] + ")"
-		logDocument["document_type"] = "1"
-		for _, user := range users {
-			if logDocument["user_id"] == user["user_id"] {
-				logDocument["username"] = user["username"]
-				logDocument["given_name"] = user["given_name"]
-				break
-			}
-		}
-		for _, doc := range docs {
-			if logDocument["document_id"] == doc["document_id"] {
-				logDocument["document_name"] = doc["name"]
-				logDocument["document_type"] = doc["type"]
-				break
-			}
-		}
-	}
+	models.LogDocumentModel.AttachDocuments(logDocuments, users, docs)
 
 	this.Data["logDocuments"] = logDocuments
 	this.Data["keyword"] = keyword

@@ -102,25 +102,7 @@ func (this *LogController) Document() {
 		this.ErrorLog("文档日志查找失败：" + err.Error())
 		this.ViewError("文档日志查找失败！", "/system/main/index")
 	}
-	for _, logDocument := range logDocuments {
-		logDocument["username"] = ""
-		logDocument["document_name"] = "已删除文档(" + logDocument["document_id"] + ")"
-		logDocument["document_type"] = "1"
-		for _, user := range users {
-			if logDocument["user_id"] == user["user_id"] {
-				logDocument["username"] = user["username"]
-				logDocument["given_name"] = user["given_name"]
-				break
-			}
-		}
-		for _, doc := range docs {
-			if logDocument["document_id"] == doc["document_id"] {
-				logDocument["document_name"] = doc["name"]
-				logDocument["document_type"] = doc["type"]
-				break
-			}
-		}
-	}
+	models.LogDocumentModel.AttachDocuments(logDocuments, users, docs)
 
 	users, err = models.UserModel.GetUsers()
 	if err != nil {
