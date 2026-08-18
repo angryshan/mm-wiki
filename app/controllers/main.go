@@ -77,6 +77,8 @@ func (this *MainController) Default() {
 	}
 	for _, logDocument := range logDocuments {
 		logDocument["username"] = ""
+		logDocument["document_name"] = "已删除文档(" + logDocument["document_id"] + ")"
+		logDocument["document_type"] = "1"
 		for _, user := range users {
 			if logDocument["user_id"] == user["user_id"] {
 				logDocument["username"] = user["username"]

@@ -254,12 +254,12 @@ func (this *DocumentController) History() {
 		this.ViewError("您没有权限查看该空间修改历史！")
 	}
 
-	logDocuments, err := models.LogDocumentModel.GetLogDocumentsByDocumentIdAndLimit(documentId, limit, number)
+	logDocuments, err := models.LogDocumentModel.GetLogDocumentsByDocumentIdAndLimit(documentId, limit, number, false)
 	if err != nil {
 		this.ErrorLog("查看文档 " + documentId + " 修改历史失败：" + err.Error())
 		this.ViewError("查看文档修改历史失败！")
 	}
-	count, err := models.LogDocumentModel.CountLogDocumentsByDocumentId(documentId)
+	count, err := models.LogDocumentModel.CountLogDocumentsByDocumentId(documentId, false)
 	if err != nil {
 		this.ErrorLog("查看文档 " + documentId + " 修改历史失败：" + err.Error())
 		this.ViewError("查看文档修改历史失败！")
